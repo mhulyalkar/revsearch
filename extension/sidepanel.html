@@ -7,8 +7,39 @@
 </head>
 <body>
   <div id="app">
-    <h1>RevSearch</h1>
-    <p>Right-click an image or click the extension icon to search.</p>
+    <header>
+      <h1>RevSearch</h1>
+    </header>
+
+    <div id="empty-state">
+      <p>Right-click an image or click the extension icon to search.</p>
+    </div>
+
+    <div id="loading-state" hidden>
+      <div class="spinner"></div>
+      <p>Searching 4 engines...</p>
+    </div>
+
+    <div id="results-state" hidden>
+      <div id="searched-image">
+        <img id="source-image" src="" alt="Searched image">
+      </div>
+
+      <div id="engine-tabs">
+        <button class="tab active" data-engine="all">All</button>
+        <button class="tab" data-engine="google">Google</button>
+        <button class="tab" data-engine="bing">Bing</button>
+        <button class="tab" data-engine="yandex">Yandex</button>
+        <button class="tab" data-engine="tineye">TinEye</button>
+      </div>
+
+      <div id="results-list"></div>
+    </div>
+
+    <div id="error-state" hidden>
+      <p id="error-message"></p>
+      <button id="retry-btn">Retry</button>
+    </div>
   </div>
   <script src="sidepanel.js"></script>
 </body>
