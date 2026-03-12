@@ -53,7 +53,7 @@ async function performSearch(imageUrl) {
     if (!response.ok) throw new Error(`Search failed: ${response.status}`);
 
     const data = await response.json();
-    currentResults = data.results;
+    currentResults = data.engines || [];
     renderResults("all");
     showState(resultsState);
   } catch (err) {
@@ -61,6 +61,13 @@ async function performSearch(imageUrl) {
     showState(errorState);
   }
 }
+
+const ENGINE_ICONS = {
+  google: "\u{1F50D}",
+  bing: "\u{1F50E}",
+  yandex: "\u{1F30D}",
+  tineye: "\u{1F441}\uFE0F"
+};
 
 function renderResults(engine) {
   resultsList.innerHTML = "";
@@ -77,14 +84,13 @@ function renderResults(engine) {
   filtered.forEach(result => {
     const a = document.createElement("a");
     a.className = "result-item";
-    a.href = result.url;
+    a.href = result.searchUrl;
     a.target = "_blank";
     a.innerHTML = `
-      ${result.thumbnail ? `<img class="result-thumb" src="${escapeHtml(result.thumbnail)}" alt="">` : ""}
+      <div class="engine-icon">${ENGINE_ICONS[result.engine] || ""}</div>
       <div class="result-info">
-        <div class="result-title">${escapeHtml(result.title || result.url)}</div>
-        <div class="result-url">${escapeHtml(result.url)}</div>
-        ${engine === "all" ? `<div class="result-engine">${escapeHtml(result.engine)}</div>` : ""}
+        <div class="result-title">Search on ${escapeHtml(result.engine.charAt(0).toUpperCase() + result.engine.slice(1))}</div>
+        <div class="result-url">Click to open reverse image search</div>
       </div>
     `;
     resultsList.appendChild(a);
