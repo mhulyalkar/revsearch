@@ -1,0 +1,6 @@
+{
+  "name": "revsearch-backend",
+  "version": "1.0.0",
+  "description": "RevSearch AWS backend",
+  "private": true
+}
