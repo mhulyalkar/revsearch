@@ -2,5 +2,25 @@
   "name": "revsearch-backend",
   "version": "1.0.0",
   "description": "RevSearch AWS backend",
-  "private": true
+  "private": true,
+  "main": "index.js",
+  "directories": {
+    "test": "test"
+  },
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "dependencies": {
+    "aws-cdk-lib": "^2.243.0",
+    "constructs": "^10.5.1"
+  },
+  "devDependencies": {
+    "@types/node": "^25.5.0",
+    "aws-cdk": "^2.1111.0",
+    "ts-node": "^10.9.2",
+    "typescript": "^5.9.3"
+  }
 }
