@@ -1,6 +1,6 @@
 // RevSearch side panel
 
-const API_BASE = "https://YOUR_API_GATEWAY_URL"; // replaced after backend deploy
+const API_BASE = "https://n8w258hjoi.execute-api.us-east-1.amazonaws.com/prod";
 
 const emptyState = document.getElementById("empty-state");
 const loadingState = document.getElementById("loading-state");
