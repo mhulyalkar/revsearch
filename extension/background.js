@@ -14,3 +14,13 @@ chrome.contextMenus.onClicked.addListener((info, tab) => {
     chrome.storage.local.set({ pendingSearch: { imageUrl: info.srcUrl } });
   }
 });
+
+chrome.action.onClicked.addListener((tab) => {
+  chrome.tabs.sendMessage(tab.id, { action: "startImageSelection" });
+});
+
+chrome.runtime.onMessage.addListener((message, sender) => {
+  if (message.action === "openSidePanel" && sender.tab) {
+    chrome.sidePanel.open({ tabId: sender.tab.id });
+  }
+});
