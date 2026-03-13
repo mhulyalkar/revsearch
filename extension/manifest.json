@@ -3,7 +3,7 @@
   "name": "RevSearch — Multi-Engine Reverse Image Search",
   "version": "1.0.0",
   "description": "Reverse image search across Google, Bing, Yandex, and TinEye with one click.",
-  "permissions": ["contextMenus", "sidePanel", "activeTab", "storage"],
+  "permissions": ["contextMenus", "sidePanel", "activeTab", "storage", "tabs"],
   "background": {
     "service_worker": "background.js"
   },

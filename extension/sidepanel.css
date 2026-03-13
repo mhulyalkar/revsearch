@@ -140,6 +140,13 @@ h1 { font-size: 16px; font-weight: 600; }
   margin-bottom: 8px;
 }
 
+.search-status {
+  padding: 10px 0;
+  font-size: 12px;
+  color: #4285f4;
+  border-bottom: 1px solid #f0f0f0;
+}
+
 #retry-btn {
   margin-top: 12px;
   padding: 8px 20px;

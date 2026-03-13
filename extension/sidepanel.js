@@ -1,7 +1,5 @@
 // RevSearch side panel
 
-const API_BASE = "https://n8w258hjoi.execute-api.us-east-1.amazonaws.com/prod";
-
 const emptyState = document.getElementById("empty-state");
 const loadingState = document.getElementById("loading-state");
 const resultsState = document.getElementById("results-state");
@@ -14,6 +12,33 @@ const tabs = document.querySelectorAll(".tab");
 
 let currentResults = [];
 let currentImageUrl = "";
+
+const ENGINES = [
+  {
+    engine: "google",
+    label: "Google Lens",
+    icon: "\u{1F50D}",
+    buildUrl: (url) => `https://lens.google.com/uploadbyurl?url=${encodeURIComponent(url)}`
+  },
+  {
+    engine: "bing",
+    label: "Bing Visual Search",
+    icon: "\u{1F50E}",
+    buildUrl: (url) => `https://www.bing.com/images/search?view=detailv2&iss=sbi&form=SBIVSP&sbisrc=UrlPaste&q=imgurl:${encodeURIComponent(url)}`
+  },
+  {
+    engine: "yandex",
+    label: "Yandex Images",
+    icon: "\u{1F30D}",
+    buildUrl: (url) => `https://yandex.com/images/search?rpt=imageview&url=${encodeURIComponent(url)}`
+  },
+  {
+    engine: "tineye",
+    label: "TinEye",
+    icon: "\u{1F441}\uFE0F",
+    buildUrl: (url) => `https://tineye.com/search?url=${encodeURIComponent(url)}`
+  }
+];
 
 // Listen for search triggers from storage
 chrome.storage.local.onChanged.addListener((changes) => {
@@ -38,36 +63,26 @@ function showState(state) {
   state.hidden = false;
 }
 
-async function performSearch(imageUrl) {
+function performSearch(imageUrl) {
   currentImageUrl = imageUrl;
   sourceImage.src = imageUrl;
-  showState(loadingState);
 
-  try {
-    const response = await fetch(`${API_BASE}/search`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ imageUrl })
-    });
+  // Build results client-side — no API call needed for URL-scheme search
+  currentResults = ENGINES.map(eng => ({
+    engine: eng.engine,
+    label: eng.label,
+    icon: eng.icon,
+    searchUrl: eng.buildUrl(imageUrl)
+  }));
 
-    if (!response.ok) throw new Error(`Search failed: ${response.status}`);
+  // Open all 4 engine tabs automatically
+  currentResults.forEach(result => {
+    chrome.tabs.create({ url: result.searchUrl, active: false });
+  });
 
-    const data = await response.json();
-    currentResults = data.engines || [];
-    renderResults("all");
-    showState(resultsState);
-  } catch (err) {
-    errorMessage.textContent = err.message || "Search failed. Please try again.";
-    showState(errorState);
-  }
+  renderResults("all");
+  showState(resultsState);
 }
-
-const ENGINE_ICONS = {
-  google: "\u{1F50D}",
-  bing: "\u{1F50E}",
-  yandex: "\u{1F30D}",
-  tineye: "\u{1F441}\uFE0F"
-};
 
 function renderResults(engine) {
   resultsList.innerHTML = "";
@@ -81,15 +96,21 @@ function renderResults(engine) {
     return;
   }
 
+  // Status message
+  const status = document.createElement("p");
+  status.className = "search-status";
+  status.textContent = `Opened ${filtered.length} search engine${filtered.length > 1 ? "s" : ""} in new tabs. Click below to reopen.`;
+  resultsList.appendChild(status);
+
   filtered.forEach(result => {
     const a = document.createElement("a");
     a.className = "result-item";
     a.href = result.searchUrl;
     a.target = "_blank";
     a.innerHTML = `
-      <div class="engine-icon">${ENGINE_ICONS[result.engine] || ""}</div>
+      <div class="engine-icon">${result.icon}</div>
       <div class="result-info">
-        <div class="result-title">Search on ${escapeHtml(result.engine.charAt(0).toUpperCase() + result.engine.slice(1))}</div>
+        <div class="result-title">${escapeHtml(result.label)}</div>
         <div class="result-url">Click to open reverse image search</div>
       </div>
     `;
