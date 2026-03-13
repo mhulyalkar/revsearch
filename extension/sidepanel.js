@@ -1,5 +1,7 @@
 // RevSearch side panel
 
+const API_BASE = "https://n8w258hjoi.execute-api.us-east-1.amazonaws.com/prod";
+
 const emptyState = document.getElementById("empty-state");
 const loadingState = document.getElementById("loading-state");
 const resultsState = document.getElementById("results-state");
@@ -63,25 +65,99 @@ function showState(state) {
   state.hidden = false;
 }
 
-function performSearch(imageUrl) {
+async function performSearch(imageUrl) {
   currentImageUrl = imageUrl;
   sourceImage.src = imageUrl;
+  showState(loadingState);
 
-  // Build results client-side — no API call needed for URL-scheme search
-  currentResults = ENGINES.map(eng => ({
-    engine: eng.engine,
-    label: eng.label,
-    icon: eng.icon,
-    searchUrl: eng.buildUrl(imageUrl)
-  }));
+  try {
+    // Step 1: Try to capture the image via content script and upload to S3
+    const publicUrl = await uploadImageToS3(imageUrl);
+    const searchUrl = publicUrl || imageUrl; // fallback to original URL
 
-  // Open all 4 engine tabs automatically
-  currentResults.forEach(result => {
-    chrome.tabs.create({ url: result.searchUrl, active: false });
-  });
+    // Step 2: Build search URLs with the public S3 URL
+    currentResults = ENGINES.map(eng => ({
+      engine: eng.engine,
+      label: eng.label,
+      icon: eng.icon,
+      searchUrl: eng.buildUrl(searchUrl)
+    }));
 
-  renderResults("all");
-  showState(resultsState);
+    // Step 3: Open all 4 engine tabs
+    for (const result of currentResults) {
+      chrome.tabs.create({ url: result.searchUrl, active: false });
+    }
+
+    renderResults("all");
+    showState(resultsState);
+  } catch (err) {
+    console.error("Search error:", err);
+    errorMessage.textContent = err.message || "Search failed. Please try again.";
+    showState(errorState);
+  }
+}
+
+async function uploadImageToS3(imageUrl) {
+  try {
+    // Ask content script to capture the image as base64
+    const [tab] = await chrome.tabs.query({ active: true, currentWindow: true });
+    if (!tab) return null;
+
+    const captured = await chrome.tabs.sendMessage(tab.id, {
+      action: "captureImage",
+      imageUrl
+    });
+
+    if (!captured || captured.error || !captured.dataUrl) {
+      console.warn("Could not capture image:", captured?.error);
+      return null;
+    }
+
+    // Get presigned upload URL from our API
+    const urlRes = await fetch(`${API_BASE}/upload-url`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ contentType: captured.contentType })
+    });
+
+    if (!urlRes.ok) {
+      console.warn("Failed to get upload URL");
+      return null;
+    }
+
+    const { uploadUrl, publicUrl } = await urlRes.json();
+
+    // Convert base64 data URL to blob
+    const blob = dataUrlToBlob(captured.dataUrl);
+
+    // Upload to S3 via presigned URL
+    const uploadRes = await fetch(uploadUrl, {
+      method: "PUT",
+      headers: { "Content-Type": captured.contentType },
+      body: blob
+    });
+
+    if (!uploadRes.ok) {
+      console.warn("S3 upload failed:", uploadRes.status);
+      return null;
+    }
+
+    return publicUrl;
+  } catch (err) {
+    console.warn("Upload failed, falling back to original URL:", err);
+    return null;
+  }
+}
+
+function dataUrlToBlob(dataUrl) {
+  const [header, base64] = dataUrl.split(",");
+  const mime = header.match(/:(.*?);/)[1];
+  const binary = atob(base64);
+  const array = new Uint8Array(binary.length);
+  for (let i = 0; i < binary.length; i++) {
+    array[i] = binary.charCodeAt(i);
+  }
+  return new Blob([array], { type: mime });
 }
 
 function renderResults(engine) {
@@ -96,7 +172,6 @@ function renderResults(engine) {
     return;
   }
 
-  // Status message
   const status = document.createElement("p");
   status.className = "search-status";
   status.textContent = `Opened ${filtered.length} search engine${filtered.length > 1 ? "s" : ""} in new tabs. Click below to reopen.`;

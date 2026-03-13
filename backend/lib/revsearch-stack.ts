@@ -29,7 +29,7 @@ export class RevsearchStack extends cdk.Stack {
       autoDeleteObjects: true,
       cors: [
         {
-          allowedMethods: [s3.HttpMethods.GET],
+          allowedMethods: [s3.HttpMethods.GET, s3.HttpMethods.PUT],
           allowedOrigins: ["*"],
           allowedHeaders: ["*"],
         },
@@ -82,6 +82,20 @@ export class RevsearchStack extends cdk.Stack {
 
     searchHistoryTable.grantReadWriteData(historyFn);
 
+    // Lambda — upload function (presigned S3 URLs)
+    const uploadFn = new lambda.Function(this, "UploadFunction", {
+      runtime: lambda.Runtime.NODEJS_20_X,
+      handler: "upload.handler",
+      code: lambda.Code.fromAsset(path.join(__dirname, "../src/lambda")),
+      timeout: cdk.Duration.seconds(10),
+      memorySize: 128,
+      environment: {
+        BUCKET_NAME: thumbnailBucket.bucketName,
+      },
+    });
+
+    thumbnailBucket.grantReadWrite(uploadFn);
+
     // API Gateway
     const api = new apigateway.RestApi(this, "RevsearchApi", {
       restApiName: "RevSearch API",
@@ -94,6 +108,9 @@ export class RevsearchStack extends cdk.Stack {
 
     const searchResource = api.root.addResource("search");
     searchResource.addMethod("POST", new apigateway.LambdaIntegration(searchFn));
+
+    const uploadResource = api.root.addResource("upload-url");
+    uploadResource.addMethod("POST", new apigateway.LambdaIntegration(uploadFn));
 
     const historyResource = api.root.addResource("history");
     historyResource.addMethod("GET", new apigateway.LambdaIntegration(historyFn));
